@@ -1,6 +1,7 @@
 {
-  "name": "nextjs_tailwind_shadcn_ts",
-  "version": "0.2.1",
+  "name": "nutri-tummies",
+  "version": "1.0.0",
+  "description": "AI-powered child nutrition platform for South African families",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",

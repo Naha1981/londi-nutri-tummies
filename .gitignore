@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -50,5 +51,23 @@ test
 prompt
 
 server.log
+
 # Skills directory
 /skills/
+
+# database (local sqlite — provision a hosted DB for production)
+/db/*.db
+/db/*.db-journal
+
+# sandbox / environment internals
+/.zscripts/
+/mini-services/
+/examples/
+/tool-results/
+/upload/
+/download/
+/worklog.md
+/tests/
+Caddyfile
+.dev.pid
+*.pid
