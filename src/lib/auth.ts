@@ -61,6 +61,7 @@ export type SessionUser = {
   name: string;
   plan: string;
   trialEndsAt: Date | null;
+  premiumUntil: Date | null;
 };
 
 export async function getSessionUser(): Promise<SessionUser | null> {
@@ -84,6 +85,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
       name: u.name,
       plan: u.plan,
       trialEndsAt: u.trialEndsAt,
+      premiumUntil: u.premiumUntil,
     };
   } catch {
     return null;
@@ -113,8 +115,16 @@ export function entitlementsFor(plan: string): Entitlements {
   }
 }
 
-export function planActive(user: { plan: string; trialEndsAt: Date | null }): string {
+export function planActive(user: { plan: string; trialEndsAt: Date | null; premiumUntil?: Date | null }): string {
   if (user.plan === "premium_trial" && user.trialEndsAt && user.trialEndsAt < new Date()) {
+    return "free";
+  }
+  // paid premium/pro lapses to free once premiumUntil passes
+  if (
+    (user.plan === "premium" || user.plan === "pro") &&
+    user.premiumUntil &&
+    user.premiumUntil < new Date()
+  ) {
     return "free";
   }
   return user.plan;

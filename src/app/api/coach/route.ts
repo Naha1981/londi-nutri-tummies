@@ -3,6 +3,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSessionUser, entitlementsFor, planActive } from "@/lib/auth";
 import { coachReply } from "@/lib/ai";
+import { rateLimit, tooManyRequests, AI_BURST_LIMIT, AI_BURST_WINDOW, AI_RATE_MESSAGE } from "@/lib/ratelimit";
+import { cacheKey, cacheGet, cacheSet, TTL_COACH } from "@/lib/aicache";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -38,6 +40,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // burst protection (all AI endpoints share one per-user budget)
+    const burst = await rateLimit("ai", user.id, AI_BURST_LIMIT, AI_BURST_WINDOW);
+    if (!burst.allowed) return tooManyRequests(burst.retryAfterSec, AI_RATE_MESSAGE);
+
     // persist user message
     const userMsg = await db.coachMessage.create({
       data: { userId: user.id, role: "user", content: parsed.data.message },
@@ -53,7 +59,7 @@ export async function POST(req: NextRequest) {
       .map((c) => `- ${c.name}, ${c.ageYears}y: likes ${c.likes || "n/a"}; dislikes ${c.dislikes || "n/a"}; allergies ${c.allergies || "none"}`)
       .join("\n");
 
-    const reply = await coachReply(history, profiles);
+    const reply = await coachReplyCached(history, profiles, parsed.data.message);
     if (!reply) {
       const assistantMsg = await db.coachMessage.create({
         data: {
@@ -73,6 +79,26 @@ export async function POST(req: NextRequest) {
     console.error("[coach:POST]", err);
     return NextResponse.json({ error: "The coach is unavailable right now." }, { status: 500 });
   }
+}
+
+// coach reply with a 24h cache: identical question + identical context (child
+// profiles + tail of conversation) returns the cached answer instead of
+// burning tokens on a repeat call.
+async function coachReplyCached(history: { role: string; content: string }[], profiles: string, message: string) {
+  const tail = history
+    .slice(-3)
+    .map((m) => `${m.role}:${m.content.slice(0, 120)}`)
+    .join("|");
+  const key = cacheKey("coach", {
+    q: message.toLowerCase().trim(),
+    profiles,
+    tail,
+  });
+  const cached = await cacheGet<string>(key);
+  if (cached) return cached;
+  const reply = await coachReply(history, profiles);
+  if (reply) await cacheSet("coach", key, reply, TTL_COACH);
+  return reply;
 }
 
 export async function DELETE() {

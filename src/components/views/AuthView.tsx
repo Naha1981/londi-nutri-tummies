@@ -10,7 +10,7 @@ import { Sprout, ArrowLeft, Loader2, Check } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 export function AuthView() {
-  const { authMode, setAuthMode, setView, setSession } = useAppStore();
+  const { authMode, setAuthMode, setView, setSession, openLegal } = useAppStore();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -153,6 +153,20 @@ export function AuthView() {
               >
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : authMode === "signup" ? "Create account & start trial" : "Sign in"}
               </Button>
+
+              {authMode === "signup" && (
+                <p className="text-xs text-muted-foreground leading-relaxed pt-1">
+                  By creating an account you agree to our{" "}
+                  <button type="button" onClick={() => openLegal("terms")} className="text-primary font-bold hover:underline">
+                    Terms
+                  </button>{" "}
+                  and{" "}
+                  <button type="button" onClick={() => openLegal("privacy")} className="text-primary font-bold hover:underline">
+                    Privacy Policy
+                  </button>
+                  . Child profiles are created by parents or guardians only.
+                </p>
+              )}
             </form>
 
             <div className="mt-5 text-center text-sm">

@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     }
     await createSession(user.id);
     return NextResponse.json({
-      user: { id: user.id, name: user.name, email: user.email, plan: user.plan, trialEndsAt: user.trialEndsAt },
+      user: { id: user.id, name: user.name, email: user.email, plan: user.plan, trialEndsAt: user.trialEndsAt, premiumUntil: user.premiumUntil },
     });
   } catch (err) {
     console.error("[login]", err);

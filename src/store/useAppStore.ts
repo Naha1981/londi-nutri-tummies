@@ -14,6 +14,7 @@ export type User = {
   email: string;
   plan: string;
   trialEndsAt: string | null;
+  premiumUntil: string | null;
 };
 
 export type Child = {
@@ -48,6 +49,7 @@ type AppState = {
   authMode: "signin" | "signup";
   upgradeOpen: boolean;
   upgradeReason: string;
+  legalDoc: "privacy" | "terms" | null;
   booted: boolean;
 
   setView: (v: View) => void;
@@ -61,6 +63,8 @@ type AppState = {
   removeChild: (id: string) => void;
   openUpgrade: (reason?: string) => void;
   closeUpgrade: () => void;
+  openLegal: (doc: "privacy" | "terms") => void;
+  closeLegal: () => void;
 };
 
 export const useAppStore = create<AppState>((set) => ({
@@ -73,6 +77,7 @@ export const useAppStore = create<AppState>((set) => ({
   authMode: "signup",
   upgradeOpen: false,
   upgradeReason: "",
+  legalDoc: null,
   booted: false,
 
   setView: (v) => set({ view: v }),
@@ -120,6 +125,8 @@ export const useAppStore = create<AppState>((set) => ({
 
   openUpgrade: (reason = "") => set({ upgradeOpen: true, upgradeReason: reason }),
   closeUpgrade: () => set({ upgradeOpen: false, upgradeReason: "" }),
+  openLegal: (doc) => set({ legalDoc: doc }),
+  closeLegal: () => set({ legalDoc: null }),
 }));
 
 export function zar(n: number | null | undefined): string {

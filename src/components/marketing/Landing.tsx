@@ -122,7 +122,7 @@ const FAQS = [
 ];
 
 export function Landing() {
-  const { user, setView, setAuthMode, setTab } = useAppStore();
+  const { user, setView, setAuthMode, setTab, openLegal } = useAppStore();
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
 
   const startFree = () => {
@@ -614,8 +614,16 @@ export function Landing() {
           <div>
             <div className="font-[family-name:var(--font-nunito)] font-extrabold mb-3">Legal</div>
             <ul className="space-y-2 text-muted-foreground">
-              <li>Privacy (POPIA)</li>
-              <li>Terms of use</li>
+              <li>
+                <button onClick={() => openLegal("privacy")} className="hover:text-foreground transition-colors text-left">
+                  Privacy (POPIA)
+                </button>
+              </li>
+              <li>
+                <button onClick={() => openLegal("terms")} className="hover:text-foreground transition-colors text-left">
+                  Terms of use
+                </button>
+              </li>
               <li>Cookie notice</li>
             </ul>
           </div>

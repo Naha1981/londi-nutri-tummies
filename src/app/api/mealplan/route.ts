@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSessionUser, entitlementsFor, planActive } from "@/lib/auth";
-import { generateMealPlan, fallbackPlan } from "@/lib/ai";
+import { generateMealPlan, fallbackPlan, MealPlanDraft } from "@/lib/ai";
+import { rateLimit, tooManyRequests, AI_BURST_LIMIT, AI_BURST_WINDOW, AI_RATE_MESSAGE } from "@/lib/ratelimit";
+import { cacheKey, cacheGet, cacheSet, TTL_MEALPLAN } from "@/lib/aicache";
 
 function mondayOf(d: Date): string {
   const date = new Date(d);
@@ -58,11 +60,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // generate via AI, fallback to recipe library on failure
-    let draft = await generateMealPlan(child);
-    if (!draft.meals.length) {
-      const recipes = await db.recipe.findMany();
-      draft = await fallbackPlan(child, recipes);
+    // burst protection (all AI endpoints share one per-user budget)
+    const burst = await rateLimit("ai", user.id, AI_BURST_LIMIT, AI_BURST_WINDOW);
+    if (!burst.allowed) return tooManyRequests(burst.retryAfterSec, AI_RATE_MESSAGE);
+
+    // generate via AI (cached for 1h — absorbs double-clicks/retries), fallback to recipe library
+    const planCacheKey = cacheKey("mealplan", {
+      age: child.ageYears,
+      allergies: child.allergies,
+      dislikes: child.dislikes,
+      likes: child.likes,
+      budgetBand: Math.round(child.budgetPerWeek / 25) * 25,
+      activity: child.activityLevel,
+      week,
+    });
+    let draft = await cacheGet<MealPlanDraft>(planCacheKey);
+    if (!draft) {
+      draft = await generateMealPlan(child);
+      if (!draft.meals.length) {
+        const recipes = await db.recipe.findMany();
+        draft = await fallbackPlan(child, recipes);
+      }
+      if (draft.meals.length) await cacheSet("mealplan", planCacheKey, draft, TTL_MEALPLAN);
     }
     // dedupe: keep only the first meal per (day, slot) — max 28
     const seen = new Set<string>();

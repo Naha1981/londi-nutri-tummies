@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSessionUser, entitlementsFor, planActive } from "@/lib/auth";
-import { generateRecipe } from "@/lib/ai";
+import { generateRecipe, RecipeDraft } from "@/lib/ai";
+import { rateLimit, tooManyRequests, AI_BURST_LIMIT, AI_BURST_WINDOW, AI_RATE_MESSAGE } from "@/lib/ratelimit";
+import { cacheKey, cacheGet, cacheSet, TTL_RECIPE } from "@/lib/aicache";
 
 function slugify(s: string): string {
   return (
@@ -54,7 +56,32 @@ export async function POST(req: NextRequest) {
       child = await db.child.findFirst({ where: { id: parsed.data.childId, userId: user.id } });
     }
 
-    const draft = await generateRecipe(parsed.data.ingredients, child);
+    // burst protection (all AI endpoints share one per-user budget)
+    const burst = await rateLimit("ai", user.id, AI_BURST_LIMIT, AI_BURST_WINDOW);
+    if (!burst.allowed) return tooManyRequests(burst.retryAfterSec, AI_RATE_MESSAGE);
+
+    // 7-day cache keyed on the normalised ingredient set + child profile
+    const ingredientsKey = parsed.data.ingredients
+      .toLowerCase()
+      .split(/[,;\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .sort()
+      .join(", ");
+    const recipeCacheKey = cacheKey("recipe", {
+      ingredients: ingredientsKey,
+      child: child ? { age: child.ageYears, allergies: child.allergies } : null,
+    });
+    let draft = await cacheGet<RecipeDraft>(recipeCacheKey);
+
+    if (draft) {
+      // cache hit: reuse the existing library entry instead of duplicating it
+      const existing = await db.recipe.findFirst({ where: { title: String(draft.title).slice(0, 80) } });
+      if (existing) return NextResponse.json({ recipe: existing, ai: true, cached: true });
+    } else {
+      draft = await generateRecipe(parsed.data.ingredients, child);
+      if (draft) await cacheSet("recipe", recipeCacheKey, draft, TTL_RECIPE);
+    }
     if (!draft) {
       return NextResponse.json(
         { error: "The recipe chef is busy right now — please try again in a moment." },

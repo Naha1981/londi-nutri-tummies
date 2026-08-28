@@ -3,6 +3,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 import ZAI from "z-ai-web-dev-sdk";
+import { rateLimit, tooManyRequests, AI_BURST_LIMIT, AI_BURST_WINDOW, AI_RATE_MESSAGE } from "@/lib/ratelimit";
+import { cacheKey, cacheGet, cacheSet, TTL_SHOPPING } from "@/lib/aicache";
 
 // POST: generate a consolidated shopping list (with ZAR estimates) from a child's active meal plan
 export async function POST(req: NextRequest) {
@@ -19,12 +21,22 @@ export async function POST(req: NextRequest) {
     });
     if (!plan) return NextResponse.json({ error: "Meal plan not found." }, { status: 404 });
 
+    // burst protection (all AI endpoints share one per-user budget)
+    const burst = await rateLimit("ai", user.id, AI_BURST_LIMIT, AI_BURST_WINDOW);
+    if (!burst.allowed) return tooManyRequests(burst.retryAfterSec, AI_RATE_MESSAGE);
+
+    // cache on planId — regenerating a plan produces a new planId, so a hit
+    // always matches the exact plan the user is looking at
+    const shoppingCacheKey = cacheKey("shopping", { planId: plan.id });
+    type ShoppingDraft = { name: string; qty: string; category: string; estCost: number };
+    let items: ShoppingDraft[] | null = await cacheGet<ShoppingDraft[]>(shoppingCacheKey);
+    const fromCache = items !== null;
+
+    if (!items) {
     const mealSummary = plan.meals
       .sort((a, b) => a.day - b.day || a.slot.localeCompare(b.slot))
       .map((m) => `${m.slot}: ${m.name}`)
       .join("; ");
-
-    let items: { name: string; qty: string; category: string; estCost: number }[] | null = null;
 
     try {
       const zai = await ZAI.create();
@@ -71,6 +83,10 @@ Return ONLY valid JSON: {"items": [{"name": string, "qty": string, "category": "
       }
     } catch (err) {
       console.error("[shopping:generate] AI failed, using fallback:", err);
+    }
+    } // end AI call
+    if (!fromCache && items && items.length > 0) {
+      await cacheSet("shopping", shoppingCacheKey, items, TTL_SHOPPING);
     }
 
     // graceful degradation: staple-based fallback list

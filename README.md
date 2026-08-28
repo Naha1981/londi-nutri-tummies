@@ -17,8 +17,10 @@ Nutri Tummies takes the daily stress out of feeding a family: it generates perso
 | 📔 **Food Diary** | Track what was actually eaten with star ratings — the AI uses this to improve future plans |
 | 💬 **AI Nutrition Coach** | Ask anything about fussy eating, portion sizes, budget swaps — chat history saved |
 | 💰 **Budget Guardrails** | Set a weekly food budget; plans are generated to land inside it |
+| 💳 **Built-in Billing** | PayFast & Yoco checkout with signed webhooks (demo mode until merchant keys are set) |
+| 🚦 **Scale Hardening** | DB-backed rate limiting on AI endpoints + AI response caching for cost control |
 | 🆓 **Freemium + 14-Day Trial** | Free tier (1 child, 1 plan), 14-day premium trial on signup, then R79/month or R790/year |
-| 🔒 **POPIA-aware** | Session-cookie auth, scrypt password hashing, per-user data isolation on every API call |
+| 🔒 **POPIA-ready** | Privacy policy & terms built in, session-cookie auth, scrypt password hashing, per-user data isolation on every API call |
 
 ## 🖼️ Screenshots
 
@@ -61,13 +63,29 @@ Open http://localhost:3000, create an account and add your first child profile.
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | ✅ | Prisma connection string. SQLite (`file:...`) for local dev, Postgres URL for production. |
+| `NEXT_PUBLIC_APP_URL` | ⬜ | Public URL — used to build payment return/webhook URLs. Falls back to request host. |
+| `PAYFAST_MERCHANT_ID` | ⬜ | PayFast merchant ID — setting this + the key switches billing to live PayFast checkout. |
+| `PAYFAST_MERCHANT_KEY` | ⬜ | PayFast merchant key. |
+| `PAYFAST_PASSPHRASE` | ⬜ | PayFast passphrase (used for ITN signature verification). |
+| `PAYFAST_MODE` | ⬜ | `sandbox` (default) or `live`. |
+| `YOCO_SECRET_KEY` | ⬜ | Yoco secret key — switches billing to Yoco hosted checkout. |
+
+**No payment keys set?** Billing runs in clearly-labelled **demo mode**: the full upgrade flow works, payments are simulated, and adding real keys later switches checkout to the live provider with zero code changes.
 
 ## ☁️ Deploying to Vercel
 
-1. Push this repo to GitHub and import it in Vercel.
+1. Push this repo to GitHub and import it in Vercel (framework auto-detected; `postinstall` generates the Prisma client automatically).
 2. Set `DATABASE_URL` in Vercel → Settings → Environment Variables (use a hosted Postgres such as Neon or Vercel Postgres — the serverless filesystem has no persistent SQLite).
-3. Run `bunx prisma db push` (or deploy migrations) against the production database, then seed recipes with `bunx tsx scripts/seed.ts`.
-4. Deploy. All AI features degrade gracefully to deterministic fallbacks if no model credentials are available, so the app never breaks.
+3. Run `npx prisma db push` against the production database (locally with the prod URL, or via a one-off job), then seed recipes with `npx tsx scripts/seed.ts`.
+4. Optionally set `NEXT_PUBLIC_APP_URL` and payment provider keys (see table above).
+5. Deploy. All AI features degrade gracefully to deterministic fallbacks if no model credentials are available, so the app never breaks.
+
+### Going live with payments
+
+1. Sign up at PayFast (or Yoco) and grab your merchant credentials.
+2. Add them as Vercel environment variables → redeploy.
+3. Point PayFast's ITN at `https://your-domain/api/billing/notify` (done automatically if `NEXT_PUBLIC_APP_URL` is set).
+4. Test with `PAYFAST_MODE=sandbox` first, then switch to `live`.
 
 ## 📁 Project Structure
 

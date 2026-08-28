@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAppStore, zar, AVATAR_COLORS } from "@/store/useAppStore";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Trash2, Loader2, Pencil, Sparkles, CreditCard } from "lucide-react";
+import { Plus, Trash2, Loader2, Pencil, Sparkles, CreditCard, ReceiptText, ShieldCheck, FileText } from "lucide-react";
 
 const COLOR_CHOICES = ["emerald", "orange", "rose", "violet", "amber", "teal"] as const;
 const COLOR_SWATCH: Record<string, string> = {
@@ -35,6 +35,15 @@ type EditState = {
   avatarColor: string;
 };
 
+type OrderRow = {
+  id: string;
+  planLabel: string;
+  amountCents: number;
+  status: string;
+  provider: string;
+  createdAt: string;
+};
+
 const blank: EditState = {
   name: "",
   ageYears: 6,
@@ -46,8 +55,25 @@ const blank: EditState = {
 };
 
 export function SettingsView() {
-  const { user, children, upsertChild, removeChild, openUpgrade } = useAppStore();
+  const { user, children, upsertChild, removeChild, openUpgrade, openLegal, upgradeOpen } = useAppStore();
   const [edit, setEdit] = useState<EditState | null>(null);
+  const [orders, setOrders] = useState<OrderRow[] | null>(null);
+
+  // payment history — refetched when the upgrade dialog closes (a payment
+  // may just have completed) and on mount
+  useEffect(() => {
+    if (upgradeOpen) return; // skip while dialog is open; refetch happens on close
+    let cancelled = false;
+    fetch("/api/billing/orders")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && d?.orders) setOrders(d.orders);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [upgradeOpen]);
   const [saving, setSaving] = useState(false);
 
   const openNew = () => setEdit({ ...blank });
@@ -152,6 +178,69 @@ export function SettingsView() {
         </CardContent>
       </Card>
 
+      {/* Subscription & receipts */}
+      <Card className="rounded-3xl border-border/70">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div>
+              <h2 className="font-[family-name:var(--font-nunito)] font-black text-lg flex items-center gap-2">
+                <ReceiptText className="h-5 w-5 text-primary" /> Subscription & receipts
+              </h2>
+              <p className="text-sm text-muted-foreground">Billing status and payment history.</p>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-3 mb-4">
+            <div className="rounded-2xl bg-secondary/60 border border-border/60 p-4">
+              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Current plan</div>
+              <div className="font-[family-name:var(--font-nunito)] font-black text-base mt-1">
+                {user?.plan === "premium_trial" ? "Premium Trial" : user?.plan === "premium" ? "Family Premium" : user?.plan === "pro" ? "Pro" : "Free"}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {user?.premiumUntil
+                  ? `Renews / valid until ${new Date(user.premiumUntil).toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" })}`
+                  : user?.trialEndsAt
+                    ? `Trial ends ${new Date(user.trialEndsAt).toLocaleDateString("en-ZA", { day: "numeric", month: "long" })}`
+                    : "No active subscription"}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-secondary/60 border border-border/60 p-4">
+              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Payment method</div>
+              <div className="font-[family-name:var(--font-nunito)] font-black text-base mt-1">Card via PayFast / Yoco</div>
+              <div className="text-xs text-muted-foreground mt-1">Cancel anytime from here or by email.</div>
+            </div>
+          </div>
+
+          {orders && orders.length > 0 ? (
+            <div className="rounded-2xl border border-border/60 divide-y divide-border/60 max-h-56 overflow-y-auto nt-scroll">
+              {orders.map((o) => (
+                <div key={o.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                  <div className="min-w-0">
+                    <div className="font-bold truncate">{o.planLabel}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(o.createdAt).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" })} · {o.provider}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-extrabold">{zar(o.amountCents / 100)}</span>
+                    <Badge
+                      variant="outline"
+                      className={`rounded-full font-bold capitalize ${
+                        o.status === "paid" ? "text-primary border-primary/40" : o.status === "pending" ? "text-amber-600 border-amber-300" : "text-muted-foreground"
+                      }`}
+                    >
+                      {o.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">No payments yet — receipts appear here after your first subscription.</p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Children */}
       <Card className="rounded-3xl border-border/70">
         <CardContent className="p-6">
@@ -194,6 +283,14 @@ export function SettingsView() {
           🔒 <strong className="text-foreground">Your data stays yours.</strong> Profiles, diaries and chats are
           private to your account, never sold, and processed in line with POPIA. Delete a child to
           erase their plans and diary instantly.
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3">
+            <button onClick={() => openLegal("privacy")} className="inline-flex items-center gap-1.5 font-bold text-primary hover:underline">
+              <ShieldCheck className="h-4 w-4" /> Privacy Policy (POPIA)
+            </button>
+            <button onClick={() => openLegal("terms")} className="inline-flex items-center gap-1.5 font-bold text-primary hover:underline">
+              <FileText className="h-4 w-4" /> Terms of Use
+            </button>
+          </div>
         </CardContent>
       </Card>
 
