@@ -1,0 +1,162 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.875rem;
+  --background: oklch(0.995 0.004 95); /* warm cream */
+  --foreground: oklch(0.22 0.02 140);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.02 140);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.02 140);
+  --primary: oklch(0.55 0.14 152); /* fresh garden green */
+  --primary-foreground: oklch(0.99 0.01 95);
+  --secondary: oklch(0.96 0.02 100);
+  --secondary-foreground: oklch(0.3 0.03 150);
+  --muted: oklch(0.96 0.012 100);
+  --muted-foreground: oklch(0.5 0.02 140);
+  --accent: oklch(0.95 0.045 80); /* warm honey */
+  --accent-foreground: oklch(0.32 0.06 60);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.91 0.015 100);
+  --input: oklch(0.91 0.015 100);
+  --ring: oklch(0.62 0.12 152);
+  --chart-1: oklch(0.6 0.14 152);
+  --chart-2: oklch(0.78 0.15 75);
+  --chart-3: oklch(0.72 0.12 120);
+  --chart-4: oklch(0.82 0.1 90);
+  --chart-5: oklch(0.68 0.16 50);
+  --sidebar: oklch(0.985 0.005 110);
+  --sidebar-foreground: oklch(0.22 0.02 140);
+  --sidebar-primary: oklch(0.55 0.14 152);
+  --sidebar-primary-foreground: oklch(0.99 0.01 95);
+  --sidebar-accent: oklch(0.95 0.03 95);
+  --sidebar-accent-foreground: oklch(0.32 0.04 150);
+  --sidebar-border: oklch(0.91 0.015 100);
+  --sidebar-ring: oklch(0.62 0.12 152);
+}
+
+.dark {
+  --background: oklch(0.17 0.015 150);
+  --foreground: oklch(0.96 0.01 100);
+  --card: oklch(0.21 0.02 150);
+  --card-foreground: oklch(0.96 0.01 100);
+  --popover: oklch(0.21 0.02 150);
+  --popover-foreground: oklch(0.96 0.01 100);
+  --primary: oklch(0.72 0.14 152);
+  --primary-foreground: oklch(0.15 0.02 150);
+  --secondary: oklch(0.26 0.02 150);
+  --secondary-foreground: oklch(0.96 0.01 100);
+  --muted: oklch(0.26 0.02 150);
+  --muted-foreground: oklch(0.68 0.02 130);
+  --accent: oklch(0.32 0.05 75);
+  --accent-foreground: oklch(0.93 0.06 75);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.72 0.14 152);
+  --chart-1: oklch(0.72 0.14 152);
+  --chart-2: oklch(0.78 0.15 75);
+  --chart-3: oklch(0.68 0.12 120);
+  --chart-4: oklch(0.82 0.1 90);
+  --chart-5: oklch(0.68 0.16 50);
+  --sidebar: oklch(0.19 0.018 150);
+  --sidebar-foreground: oklch(0.96 0.01 100);
+  --sidebar-primary: oklch(0.72 0.14 152);
+  --sidebar-primary-foreground: oklch(0.15 0.02 150);
+  --sidebar-accent: oklch(0.26 0.02 150);
+  --sidebar-accent-foreground: oklch(0.96 0.01 100);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.72 0.14 152);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  ::selection {
+    background: oklch(0.9 0.08 152);
+  }
+}
+
+/* Nutri Tummies brand helpers */
+.nt-hero-gradient {
+  background: linear-gradient(135deg, oklch(0.97 0.03 110) 0%, oklch(0.99 0.008 95) 45%, oklch(0.96 0.04 75) 100%);
+}
+.nt-cta-gradient {
+  background: linear-gradient(120deg, oklch(0.55 0.14 152) 0%, oklch(0.6 0.13 140) 60%, oklch(0.65 0.14 130) 100%);
+}
+.nt-dot-pattern {
+  background-image: radial-gradient(oklch(0.55 0.14 152 / 0.12) 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
+}
+.nt-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.nt-scroll::-webkit-scrollbar-thumb {
+  background: oklch(0.85 0.03 120);
+  border-radius: 999px;
+}
+.nt-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+@keyframes nt-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.nt-float {
+  animation: nt-float 5s ease-in-out infinite;
+}
+@keyframes nt-wiggle {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+.nt-wiggle {
+  animation: nt-wiggle 2.5s ease-in-out infinite;
+}

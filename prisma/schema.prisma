@@ -1,0 +1,146 @@
+// Nutri Tummies — Prisma Schema
+// Go-to-market child nutrition platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String        @id @default(cuid())
+  email          String        @unique
+  passwordHash   String
+  name           String
+  plan           String        @default("premium_trial") // free | premium_trial | premium | pro
+  trialEndsAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  sessions       Session[]
+  children       Child[]
+  mealPlans      MealPlan[]
+  diaryEntries   DiaryEntry[]
+  shoppingItems  ShoppingItem[]
+  coachMessages  CoachMessage[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Child {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  ageYears      Int
+  sex           String        @default("other") // male | female | other
+  allergies     String        @default("") // comma separated
+  dislikes      String        @default("")
+  likes         String        @default("")
+  budgetPerWeek Float         @default(450) // ZAR
+  activityLevel String        @default("moderate") // low | moderate | high
+  avatarColor   String        @default("emerald")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  mealPlans     MealPlan[]
+  diaryEntries  DiaryEntry[]
+}
+
+model MealPlan {
+  id            String     @id @default(cuid())
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  childId       String
+  child         Child      @relation(fields: [childId], references: [id], onDelete: Cascade)
+  weekStart     String // YYYY-MM-DD (Monday)
+  status        String     @default("active")
+  budget        Float?
+  estimatedCost Float?
+  notes         String?
+  createdAt     DateTime   @default(now())
+  meals         PlanMeal[]
+}
+
+model PlanMeal {
+  id          String   @id @default(cuid())
+  mealPlanId  String
+  mealPlan    MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  day         Int // 0=Mon ... 6=Sun
+  slot        String // breakfast | lunch | dinner | snack
+  name        String
+  description String?
+  calories    Int      @default(0)
+  protein     Float    @default(0)
+  carbs       Float    @default(0)
+  fat         Float    @default(0)
+  veggies     Boolean  @default(false)
+  costEst     Float    @default(0)
+  recipeText  String?  // quick how-to
+}
+
+model Recipe {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  title       String
+  category    String // breakfast | lunch | dinner | snack
+  cuisine     String  @default("South African")
+  minutes     Int     @default(20)
+  servings    Int     @default(2)
+  ingredients String // JSON string: [{item, qty}]
+  instructions String // JSON string: [steps]
+  calories    Int     @default(0)
+  protein     Float   @default(0)
+  carbs       Float   @default(0)
+  fat         Float   @default(0)
+  costEst     Float   @default(0)
+  tags        String  @default("") // comma separated
+  allergens   String  @default("") // comma separated
+  kidApproved Boolean @default(true)
+  emoji       String  @default("🍽️")
+}
+
+model DiaryEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  childId   String
+  child     Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  date      String // YYYY-MM-DD
+  slot      String // breakfast | lunch | dinner | snack
+  what      String
+  servings  Int      @default(1)
+  rating    Int? // 1-5 how well the child ate
+  notes     String?
+  calories  Int?
+  createdAt DateTime @default(now())
+}
+
+model ShoppingItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  qty       String   @default("")
+  category  String   @default("General")
+  estCost   Float?
+  checked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model CoachMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String // user | assistant
+  content   String
+  createdAt DateTime @default(now())
+}
