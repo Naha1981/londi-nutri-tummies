@@ -1,6 +1,8 @@
 // PayFast signature tests: checkout field generation + ITN verification.
 // Run: bun scripts/test-payfast.ts
 
+export {}; // module scope (avoids TS2393 clash with other scripts' main())
+
 process.env.PAYFAST_MERCHANT_ID = "10000100";
 process.env.PAYFAST_MERCHANT_KEY = "46f0cd694581a";
 process.env.PAYFAST_PASSPHRASE = "jt7NOE43FZPn";

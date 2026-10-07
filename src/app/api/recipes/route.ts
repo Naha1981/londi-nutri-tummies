@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSessionUser, entitlementsFor, planActive } from "@/lib/auth";
 import { generateRecipe, RecipeDraft } from "@/lib/ai";
+import type { Child } from "@prisma/client";
 import { rateLimit, tooManyRequests, AI_BURST_LIMIT, AI_BURST_WINDOW, AI_RATE_MESSAGE } from "@/lib/ratelimit";
 import { cacheKey, cacheGet, cacheSet, TTL_RECIPE } from "@/lib/aicache";
 
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let child = null;
+    let child: Child | null = null;
     if (parsed.data.childId) {
       child = await db.child.findFirst({ where: { id: parsed.data.childId, userId: user.id } });
     }
