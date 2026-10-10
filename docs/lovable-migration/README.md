@@ -5,6 +5,8 @@
 
 > **Scope note.** Nothing in this folder creates or configures a Lovable project, Lovable Cloud, or external accounts. Anything that depends on how Lovable actually behaves is marked **[verify during migration]**. No Lovable-specific APIs are invented here.
 
+> **2026-10-10 update.** A client-feedback roadmap was reviewed against this codebase — see [roadmap-review.md](roadmap-review.md) for the claim-by-claim fact-check (15/15 technical claims verified), the Next.js security patch record (GHSA-2xp9-vwfh-vxw4 → patched to 16.4.0 on this branch), and the mapping of each roadmap phase onto the migration phases below.
+
 ---
 
 ## 1. Current-State Architecture (confirmed from source)
@@ -125,6 +127,7 @@ All views are already `"use client"` React components that talk to the API over 
 1. **Broken graceful degradation (runtime bug, fixed + regression-tested).** `generateMealPlan()`'s degraded path called `fallbackPlan(child, null)` → `TypeError: Cannot read properties of null (reading 'filter')` → every fresh meal-plan request would **500 instead of degrading** whenever the AI provider was unavailable and the cache missed — precisely the "no AI credentials" situation a Lovable deployment starts in. Proven by `scripts/test-ai-fallback.ts` (failed before the fix, all 9 checks pass after). Fix: `fallbackPlan` now accepts `Recipe[] | null`.
 2. **7 TypeScript errors in tracked files** (masked by `ignoreBuildErrors: true`): the above null-typing in `ai.ts`, `let child = null` inference in `recipes/route.ts` (2 errors), duplicate `main()` across the two test scripts (TS2393, 2 errors × 2 files). Fixed with type annotations and `export {}` module scoping — zero runtime behaviour change. `npx tsc --noEmit` now reports **0 errors in tracked files**.
 3. **New focused test**: `scripts/test-ai-fallback.ts` (offline, no server needed) locks in the degraded-path behaviour with synthetic fixtures only.
+4. **Next.js 16.1.3 → 16.4.0 (critical security patch, verified).** [GHSA-2xp9-vwfh-vxw4](https://osv.dev/vulnerability/GHSA-2xp9-vwfh-vxw4): unauthenticated RCE in the Image Optimization API (libheif heap overflow via sharp, AVIF; CVSS 4.0: 9.5; patched releases 15.5.24 / 16.3.3). The app uses no `next/image`, but `/_next/image` exists by default — patched because the rollback plan keeps this app deployable during the migration window. Verified: offline tests, `tsc --noEmit`, ESLint, production build, and a full browser journey (signup → onboarding → AI meal-plan generation → planner render) on the upgraded runtime. Lint toolchain note: `eslint-config-next` stays at 16.1.3 and `eslint-plugin-react-hooks` is pinned at 7.0.1 (`resolutions`) — 7.1.0's new `set-state-in-effect` rule flags 7 pre-existing patterns, documented with fixes in [roadmap-review.md](roadmap-review.md) §4. No checks were disabled.
 
 **Known issues documented but deliberately NOT changed** (behaviour/production impact — your call):
 - `ignoreBuildErrors: true` in `next.config.ts` (recommend removing **after** this branch proves tsc clean).
@@ -250,6 +253,11 @@ Each phase has an acceptance check you can run **before** opening Lovable, so Lo
 | P7 | Do you want real URL routing per tab in the new app? | Current app is state-routed (no deep links) |
 | P8 | VAT: actually include, or remove the "Prices include VAT" claim? | §7 #7 |
 
+| P9 | Brand spelling: standardise on “Nutri Tummies” or “NutriTummies”? | Both spellings ship today (roadmap-review §1 #15); fix once, for free, in Lovable Phase 1 |
+| P10 | Adopt the person-vs-recipient profile split (future adult module) in the Lovable schema now? | Deciding before Lovable Phase 3 avoids a second data migration later (roadmap-review §5) |
+| P11 | Onboarding preference model: 3 categories + food groups vs current likes/dislikes strings? | New target-schema fields — decide before Lovable Phase 3 (roadmap-review §5) |
+| P12 | Will the legacy Next.js app go publicly live before cutover? | If yes, the conditional auth-hardening list becomes mandatory (roadmap-review §3) |
+
 **Technical unknowns (must be verified inside Lovable — do not assume):**
 
 | # | Unknown | Why it matters |
@@ -272,3 +280,5 @@ Each phase has an acceptance check you can run **before** opening Lovable, so Lo
 | `ai-provider-boundary.md` | Every AI touchpoint, prompt (verbatim), JSON contract, sanitisation, fallback, cache/rate-limit policy — the seam to swap providers |
 | `scripts/export-for-migration.ts` (repo root `scripts/`) | Non-destructive exporter: dry-run by default, explicit `--database-url` required, excludes sessions/rate-limits/cache, password hashes opt-in |
 | `scripts/test-ai-fallback.ts` (repo root `scripts/`) | Offline regression test for the degraded AI path (synthetic fixtures only) |
+| `docs/lovable-migration/roadmap-review.md` | Client-roadmap fact-check (15 claims verified against source), security-patch record, the 7 ESLint findings, roadmap-phase → migration-phase mapping, added decisions P9–P12 |
+| `scripts/smoke-check-api.mjs` (repo root `scripts/`) | Read-only API smoke check (auth, children, mealplan, diary, recipes, shopping, coach, billing, health) — verifies upgrades locally; doubles as the behavioural baseline for the Lovable rebuild |
