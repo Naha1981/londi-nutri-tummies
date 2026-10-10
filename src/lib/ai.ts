@@ -108,8 +108,11 @@ Return ONLY valid JSON matching exactly this shape:
   return fallbackPlan(child, null);
 }
 
-export async function fallbackPlan(child: Child, recipes: Recipe[]): Promise<MealPlanDraft> {
-  const byCat = (c: string) => recipes.filter((r) => r.category === c);
+export async function fallbackPlan(child: Child, recipes: Recipe[] | null): Promise<MealPlanDraft> {
+  // recipes may be null on the degraded path inside generateMealPlan() —
+  // the plan then falls back to generic staple meals (never throws).
+  const pool = recipes ?? [];
+  const byCat = (c: string) => pool.filter((r) => r.category === c);
   const safe = (list: Recipe[]) =>
     list.filter((r) => {
       const allergens = (r.allergens || "").toLowerCase();

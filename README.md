@@ -104,6 +104,10 @@ scripts/seed.ts             # 20 SA recipes with ZAR costs & allergens
 
 Free tier → 14-day premium trial → Premium (R79/mo) or Pro (R129/mo). Entitlements are enforced server-side in `src/lib/auth.ts` (children count, plan generations, coach messages per day).
 
+## 🧳 Lovable Migration
+
+Preparing to migrate this app to [Lovable](https://lovable.dev)? See **[`docs/lovable-migration/`](docs/lovable-migration/)** for the full handoff: architecture audit, screen-by-screen migration map, target database schema (draft), AI provider boundary, and a safe data-export tool (`scripts/export-for-migration.ts`).
+
 ---
 
 Built with ❤️ for South African parents.

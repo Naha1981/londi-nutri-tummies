@@ -59,6 +59,10 @@ server.log
 /db/*.db
 /db/*.db-journal
 
+# migration exports (contain personal data — never commit)
+/migration-export/
+/tmp-export-test/
+
 # sandbox / environment internals
 /.zscripts/
 /mini-services/

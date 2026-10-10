@@ -2,6 +2,8 @@
 // Run: bun scripts/test-hardening.ts
 // Uses the dev server at http://localhost:3000.
 
+export {}; // module scope (avoids TS2393 clash with other scripts' main())
+
 const BASE = "http://localhost:3000";
 let cookie = "";
 let pass = 0;
